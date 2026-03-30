@@ -1,6 +1,10 @@
 # Web-project
 
-Our team:
-1.Tulebayeva Tomiris
-2.Torossyan David
-3.Amangeldi Dinmukhammed
+Our team members:
+1.Torossyan David
+2.Amangeldi Dinmukhammed
+3.Tulebayeva Tomiris
+
+
+Our project:
+Description:
