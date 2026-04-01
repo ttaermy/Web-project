@@ -1,9 +1,8 @@
 # Web-project
 
 Our team members:
-1.Torossyan David
-2.Amangeldi Dinmukhammed
-3.Tulebayeva Tomiris
+1.Amangeldi Dinmukhammed
+2.Tulebayeva Tomiris
 
 
 Our project:
