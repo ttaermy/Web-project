@@ -1,0 +1,91 @@
+POST http://127.0.0.1:8000/api/auth/login/ 
+Content-Type: application/json
+
+{
+    "username":"user",
+    "password":"123456"
+}
+###
+POST http://127.0.0.1:8000/api/auth/logout/
+Authorization: Token 3eb5ad801ba26adb0d1bcf23d7b7c52fff052aef
+###
+GET http://127.0.0.1:8000/api/products/
+###
+POST http://127.0.0.1:8000/api/products/
+Authorization: Token 7a68d1175932a8887c07ca57b47682304fc1cae7
+Content-Type: application/json
+
+{
+    "name": "Монитор",
+    "description": "27 дюймов",
+    "price": 80000,
+    "stock": 5,
+    "category": 1
+}
+###
+GET http://127.0.0.1:8000/api/products/1/
+###
+PATCH http://127.0.0.1:8000/api/products/1/
+Authorization: Token 7a68d1175932a8887c07ca57b47682304fc1cae7
+Content-Type: application/json
+
+{
+    "stock": 99
+}
+###
+DELETE http://127.0.0.1:8000/api/products/1/
+Authorization: Token 7a68d1175932a8887c07ca57b47682304fc1cae7
+###
+GET http://127.0.0.1:8000/api/categories/
+###
+POST http://127.0.0.1:8000/api/categories/
+Authorization: Token 7a68d1175932a8887c07ca57b47682304fc1cae7
+Content-Type: application/json
+
+{
+    "name": "Электроника"
+}
+###
+POST http://127.0.0.1:8000/api/orders/
+Content-Type: application/json
+
+{
+    "customer_name": "Димаш",
+    "customer_phone": "+77001234567",
+    "items": [
+        {
+            "product": 3,
+            "quantity": 1,
+            "price_at_order": "150000.00"
+        },
+        {
+            "product": 2,
+            "quantity": 2,
+            "price_at_order": "3500.00"
+        }
+    ]
+}
+###
+GET http://127.0.0.1:8000/api/orders/
+Authorization: Token 7a68d1175932a8887c07ca57b47682304fc1cae7
+###
+GET http://127.0.0.1:8000/api/orders/1/
+Authorization: Token 7a68d1175932a8887c07ca57b47682304fc1cae7
+###
+PATCH http://127.0.0.1:8000/api/orders/1/
+Authorization: Token 7a68d1175932a8887c07ca57b47682304fc1cae7
+Content-Type: application/json
+
+{
+    "status": "confirmed"
+}
+###
+GET http://127.0.0.1:8000/api/stats/
+Authorization: Token 7a68d1175932a8887c07ca57b47682304fc1cae7
+###
+POST http://127.0.0.1:8000/api/ai-search/
+Content-Type: application/json
+
+{
+    "query": "что-то для работы недорогое"
+}
