@@ -13,8 +13,6 @@ import { Product, Category } from '../../shared/interfaces/product.interface';
   imports: [CommonModule, FormsModule, LucideSparkles, LucideBot, LucideSearch],
   template: `
     <div class="catalog">
-
-      <!-- AI Search -->
       <div class="ai-search-block">
         <div class="ai-label">
           <svg lucideSparkles [size]="16"></svg>
@@ -49,8 +47,6 @@ import { Product, Category } from '../../shared/interfaces/product.interface';
           <div class="ai-error">{{ aiError() }}</div>
         }
       </div>
-
-      <!-- Filters -->
       <div class="catalog-toolbar">
         <div class="toolbar-left">
           <input
@@ -75,35 +71,39 @@ import { Product, Category } from '../../shared/interfaces/product.interface';
           {{ displayProducts().length }} товаров
         </p>
       </div>
-
-      <!-- Grid -->
       @if (displayProducts().length > 0) {
         <div class="products-grid">
           @for (p of displayProducts(); track p.id) {
             <div class="product-card">
               <div class="product-img">
-                <span>{{ p.name.charAt(0) }}</span>
+                @if (p.stock === 0) {
+                  <span class="badge badge-empty">Нет</span>
+                } @else if (p.stock <= 5) {
+                  <span class="badge badge-low">Мало</span>
+                }
+                @if (p.image_url) {
+                  <img [src]="p.image_url" [alt]="p.name" class="product-img-photo" />
+                } @else {
+                  <div class="product-img-fallback">{{ p.name.charAt(0) }}</div>
+                }
               </div>
               <div class="product-body">
-                <p class="product-category">{{ p.category_name }}</p>
+                <p class="product-price">{{ formatPrice(p.price) }}</p>
                 <h3 class="product-name">{{ p.name }}</h3>
                 @if (p.description) {
                   <p class="product-desc">{{ p.description }}</p>
                 }
-                <div class="product-footer">
-                  <span class="product-price">{{ formatPrice(p.price) }}</span>
-                  @if (p.stock > 0) {
-                    <button
-                      class="btn btn-primary btn-sm"
-                      (click)="addToCart(p)"
-                      [class.added]="isAdded(p.id)"
-                    >
-                      {{ isAdded(p.id) ? '✓ В корзине' : 'В корзину' }}
-                    </button>
-                  } @else {
-                    <span class="out-of-stock">Нет в наличии</span>
-                  }
-                </div>
+                @if (p.stock > 0) {
+                  <button
+                    class="btn-buy"
+                    (click)="addToCart(p)"
+                    [class.added]="isAdded(p.id)"
+                  >
+                    {{ isAdded(p.id) ? '✓ В корзине' : 'Купить' }}
+                  </button>
+                } @else {
+                  <button class="btn-buy btn-buy-disabled" disabled>Нет в наличии</button>
+                }
               </div>
             </div>
           }
@@ -120,7 +120,6 @@ import { Product, Category } from '../../shared/interfaces/product.interface';
   styles: [`
     .catalog { display: flex; flex-direction: column; gap: 20px; }
 
-    /* AI Search */
     .ai-search-block {
       background: linear-gradient(135deg, #EFF6FF 0%, #F0F9FF 100%);
       border: 1px solid #BFDBFE;
@@ -130,7 +129,6 @@ import { Product, Category } from '../../shared/interfaces/product.interface';
       flex-direction: column;
       gap: 12px;
     }
-
     .ai-label {
       display: flex;
       align-items: center;
@@ -197,55 +195,87 @@ import { Product, Category } from '../../shared/interfaces/product.interface';
     /* Grid */
     .products-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       gap: 16px;
     }
 
     .product-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
+      border-radius: 12px;
       overflow: hidden;
-      box-shadow: var(--shadow);
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
       transition: box-shadow .2s, transform .2s;
+      display: flex;
+      flex-direction: column;
 
       &:hover {
-        box-shadow: var(--shadow-md);
+        box-shadow: 0 6px 20px rgba(0,0,0,.1);
         transform: translateY(-2px);
       }
     }
 
     .product-img {
-      height: 120px;
-      background: var(--bg);
+      position: relative;
+      aspect-ratio: 1 / 1;
+      background: #F7F7F7;
+      overflow: hidden;
+    }
+
+    .product-img-photo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .product-img-fallback {
+      width: 100%;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 48px;
+      font-size: 56px;
       font-weight: 700;
       color: var(--primary);
-      opacity: .3;
+      opacity: .15;
     }
+
+    .badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      z-index: 1;
+    }
+
+    .badge-low  { background: #FEF9C3; color: #854D0E; }
+    .badge-empty { background: #FEE2E2; color: #991B1B; }
 
     .product-body {
-      padding: 16px;
+      padding: 12px 14px 14px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
+      flex: 1;
     }
 
-    .product-category {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--primary);
-      text-transform: uppercase;
-      letter-spacing: .05em;
+    .product-price {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
     }
 
     .product-name {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 600;
       color: var(--text);
+      line-height: 1.3;
     }
 
     .product-desc {
@@ -255,31 +285,40 @@ import { Product, Category } from '../../shared/interfaces/product.interface';
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
+      line-height: 1.4;
+      flex: 1;
     }
 
-    .product-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-top: 8px;
-    }
-
-    .product-price {
-      font-size: 16px;
-      font-weight: 700;
+    .btn-buy {
+      margin-top: 10px;
+      width: 100%;
+      padding: 9px 0;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
       color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, border-color .15s, color .15s;
+
+      &:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+        background: #EFF6FF;
+      }
+
+      &.added {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: #fff;
+      }
     }
 
-    .btn-sm { padding: 6px 12px; font-size: 12px; }
-
-    .btn.added {
-      background: var(--success);
-      &:hover { background: #15803D; }
-    }
-
-    .out-of-stock {
-      font-size: 12px;
-      color: var(--text-muted);
+    .btn-buy-disabled {
+      opacity: .4;
+      cursor: not-allowed;
+      &:hover { border-color: var(--border); color: var(--text); background: var(--surface); }
     }
 
     .empty-state {

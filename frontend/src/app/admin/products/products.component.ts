@@ -10,8 +10,6 @@ import { Product, Category, ProductForm } from '../../shared/interfaces/product.
   imports: [CommonModule, FormsModule],
   template: `
     <div class="page">
-
-      <!-- Header -->
       <div class="page-header">
         <div>
           <h2>Товары</h2>
@@ -24,8 +22,6 @@ import { Product, Category, ProductForm } from '../../shared/interfaces/product.
           Добавить товар
         </button>
       </div>
-
-      <!-- Filters -->
       <div class="filters card">
         <input
           type="text"
@@ -55,8 +51,6 @@ import { Product, Category, ProductForm } from '../../shared/interfaces/product.
           <option value="empty">Нет в наличии</option>
         </select>
       </div>
-
-      <!-- Table -->
       <div class="card" style="padding: 0; overflow: hidden">
         <table>
           <thead>
@@ -121,8 +115,6 @@ import { Product, Category, ProductForm } from '../../shared/interfaces/product.
         </table>
       </div>
     </div>
-
-    <!-- Modal -->
     @if (showModal()) {
       <div class="modal-overlay" (click)="closeModal()">
         <div class="modal" (click)="$event.stopPropagation()">
@@ -134,18 +126,15 @@ import { Product, Category, ProductForm } from '../../shared/interfaces/product.
               </svg>
             </button>
           </div>
-
           <div class="modal-body">
             <div class="form-group">
               <label>Название *</label>
               <input type="text" placeholder="Название товара" [(ngModel)]="form.name" name="name" />
             </div>
-
             <div class="form-group">
               <label>Описание</label>
               <textarea placeholder="Описание товара" [(ngModel)]="form.description" name="description" rows="3"></textarea>
             </div>
-
             <div class="form-row">
               <div class="form-group">
                 <label>Цена (₸) *</label>
@@ -180,7 +169,37 @@ import { Product, Category, ProductForm } from '../../shared/interfaces/product.
                 Добавить
               </button>
             </div>
-
+<div class="form-group">
+  <label>Изображение товара</label>
+  <div class="image-upload" (click)="fileInput.click()">
+    @if (imagePreview) {
+      <img [src]="imagePreview" class="image-preview" alt="preview" />
+    } @else if (editingProduct()?.image_url) {
+      <img [src]="editingProduct()!.image_url" class="image-preview" alt="current" />
+    } @else {
+      <div class="upload-placeholder">
+        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <rect x="2" y="2" width="20" height="20" rx="3"/>
+        </svg>
+        <span>Нажми чтобы загрузить</span>
+      </div>
+    }
+  </div>
+  <input
+    #fileInput
+    type="file"
+    accept="image/*"
+    style="display: none"
+    (change)="onFileChange($event)"
+  />
+  @if (imagePreview || editingProduct()?.image_url) {
+    <button class="btn btn-ghost" style="margin-top: 6px" (click)="clearImage()">
+      Удалить фото
+    </button>
+  }
+</div>
             @if (formError()) {
               <div class="error-msg">{{ formError() }}</div>
             }
@@ -326,7 +345,33 @@ import { Product, Category, ProductForm } from '../../shared/interfaces/product.
       padding: 10px 14px;
       font-size: 13px;
     }
+.image-upload {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color .15s;
 
+  &:hover { border-color: var(--primary); }
+}
+
+.upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--text-muted);
+
+  span { font-size: 13px; }
+}
+
+.image-preview {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  display: block;
+}
     textarea { resize: vertical; min-height: 80px; }
   `]
 })
@@ -341,7 +386,25 @@ export class ProductsComponent implements OnInit {
   saving           = signal(false);
   formError        = signal('');
   newCategoryName  = signal('');
+  imagePreview: string | null = null;
+  selectedFile: File | null   = null;
 
+onFileChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file  = input.files?.[0];
+  if (!file) return;
+
+  this.selectedFile = file;
+
+  const reader = new FileReader();
+  reader.onload = () => this.imagePreview = reader.result as string;
+  reader.readAsDataURL(file);
+}
+
+clearImage() {
+  this.imagePreview = null;
+  this.selectedFile = null;
+}
   form: ProductForm = { name: '', description: '', price: null, stock: null, category: null };
 
   filteredProducts = computed(() => {
@@ -387,6 +450,8 @@ export class ProductsComponent implements OnInit {
       ? { name: product.name, description: product.description, price: +product.price, stock: product.stock, category: product.category }
       : { name: '', description: '', price: null, stock: null, category: null };
     this.showModal.set(true);
+    this.imagePreview   = null;  
+    this.selectedFile   = null;   
   }
 
   closeModal() {
@@ -395,30 +460,32 @@ export class ProductsComponent implements OnInit {
     this.formError.set('');
   }
 
-  saveProduct() {
-    if (!this.form.name || this.form.price === null || this.form.stock === null || !this.form.category) {
-      this.formError.set('Заполните все обязательные поля');
-      return;
-    }
-    this.saving.set(true);
-    this.formError.set('');
-
-    const request$ = this.editingProduct()
-      ? this.productService.updateProduct(this.editingProduct()!.id, this.form)
-      : this.productService.createProduct(this.form);
-
-    request$.subscribe({
-      next: () => {
-        this.loadProducts();
-        this.closeModal();
-        this.saving.set(false);
-      },
-      error: () => {
-        this.formError.set('Ошибка при сохранении');
-        this.saving.set(false);
-      }
-    });
+ saveProduct() {
+  if (!this.form.name || this.form.price === null || this.form.stock === null || !this.form.category) {
+    this.formError.set('Заполните все обязательные поля');
+    return;
   }
+  this.saving.set(true);
+  this.formError.set('');
+
+  const formWithImage = { ...this.form, image: this.selectedFile };
+
+  const request$ = this.editingProduct()
+    ? this.productService.updateProduct(this.editingProduct()!.id, formWithImage)  // ← formWithImage
+    : this.productService.createProduct(formWithImage);                             // ← formWithImage
+
+  request$.subscribe({
+    next: () => {
+      this.loadProducts();
+      this.closeModal();
+      this.saving.set(false);
+    },
+    error: () => {
+      this.formError.set('Ошибка при сохранении');
+      this.saving.set(false);
+    }
+  });
+}
 
   deleteProduct(product: Product) {
     if (!confirm(`Удалить "${product.name}"?`)) return;
