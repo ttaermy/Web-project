@@ -38,6 +38,7 @@ class ProductSerializer(serializers.ModelSerializer):
         source='category.name',
         read_only=True
     )
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model  = Product
@@ -45,9 +46,20 @@ class ProductSerializer(serializers.ModelSerializer):
             'id', 'name', 'description',
             'price', 'stock',
             'category', 'category_name',
+            'image', 'image_url',
             'created_at'
         ]
+        extra_kwargs = {
+            'image': {'required': False}  # ← не обязательное
+        }
 
+    def get_image_url(self, obj):
+        if obj.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(

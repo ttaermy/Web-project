@@ -22,6 +22,7 @@ class Product(models.Model):
                     null=True,
                     related_name='products'
                   )
+    image       = models.ImageField(upload_to='products/', blank=True, null=True)  # ← новое
     created_at  = models.DateTimeField(auto_now_add=True)
 
     class Meta:

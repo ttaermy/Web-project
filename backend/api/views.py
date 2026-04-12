@@ -1,4 +1,4 @@
-
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework                 import generics, permissions, status
 from rest_framework.decorators      import api_view, permission_classes
 from rest_framework.response        import Response
@@ -92,7 +92,6 @@ def ai_search(request):
         for p in products
     ]
 
-    # Промпт для Gemini
     prompt = f"""
 Ты — помощник в магазине. Тебе дан список товаров и запрос покупателя.
 Верни ТОЛЬКО валидный JSON без лишнего текста, без markdown, без блоков кода.
@@ -150,24 +149,31 @@ def ai_search(request):
         )
 #cbv1
 class ProductListCreateView(generics.ListCreateAPIView):
-    queryset           = Product.objects.select_related('category').all()
-    serializer_class   = ProductSerializer
+    queryset         = Product.objects.select_related('category').all()
+    serializer_class = ProductSerializer
+    parser_classes   = [MultiPartParser, FormParser, JSONParser] 
 
     def get_permissions(self):
         if self.request.method == 'GET':
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
 
+    def get_serializer_context(self):
+        return {'request': self.request}
+   
 #cbv2
 class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset         = Product.objects.all()
     serializer_class = ProductSerializer
+    parser_classes   = [MultiPartParser, FormParser, JSONParser]
 
     def get_permissions(self):
         if self.request.method == 'GET':
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
 
+    def get_serializer_context(self):
+        return {'request': self.request}
 
 #cbv3
 class OrderListCreateView(generics.ListCreateAPIView):
