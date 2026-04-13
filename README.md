@@ -283,15 +283,6 @@ Content-Type: application/json
 | quantity | PositiveIntegerField |
 | price_at_order | DecimalField |
 
----
-
-## Переменные окружения
-
-Создай файл `backend/.env`:
-
-```env
-GEMINI_API_KEY=получи на aistudio.google.com
-```
 
 ## Критерии проекта
 
