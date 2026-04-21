@@ -74,7 +74,6 @@ Chart.register(...registerables);
           </div>
         </div>
 
-        <!-- Sales Chart -->
         <div class="card chart-card" style="margin-top: 24px">
           <div class="card-header">
             <h3>Продажи за 30 дней</h3>
@@ -83,8 +82,6 @@ Chart.register(...registerables);
             <canvas #salesChart></canvas>
           </div>
         </div>
-
-        <!-- Top Products -->
         <div class="card" style="margin-top: 24px">
           <div class="card-header">
             <h3>Топ товаров по продажам</h3>

@@ -26,7 +26,6 @@ import { SkeletonComponent } from '../../shared/components/skeleton/skeleton.com
         </button>
       </div>
 
-      <!-- Фильтр по статусу -->
       <div class="status-tabs">
         @for (tab of tabs; track tab.value) {
           <button
@@ -39,8 +38,6 @@ import { SkeletonComponent } from '../../shared/components/skeleton/skeleton.com
           </button>
         }
       </div>
-
-      <!-- Таблица -->
       <div class="card" style="padding: 0; overflow: hidden">
         <table>
           <thead>

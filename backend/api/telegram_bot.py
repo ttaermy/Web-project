@@ -1,5 +1,3 @@
-# Token:   message @BotFather on Telegram → /newbot
-# Chat ID: message @userinfobot on Telegram
 import requests
 from django.conf import settings
 
@@ -7,6 +5,7 @@ from django.conf import settings
 def send_order_notification(order):
     token   = getattr(settings, 'TELEGRAM_BOT_TOKEN', None)
     chat_id = getattr(settings, 'TELEGRAM_CHAT_ID', None)
+
     if not token or not chat_id:
         return
 
@@ -14,7 +13,7 @@ def send_order_notification(order):
         f'{item.product.name} x{item.quantity}'
         for item in order.items.all()
         if item.product
-    )
+    ) or 'Нет товаров'
 
     text = (
         f'🛍 Новый заказ #{order.id}\n'

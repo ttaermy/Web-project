@@ -63,7 +63,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'created_at'
         ]
         extra_kwargs = {
-            'image': {'required': False}  # ← не обязательное
+            'image': {'required': False} 
         }
 
     def get_image_url(self, obj):

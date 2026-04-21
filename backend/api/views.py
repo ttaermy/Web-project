@@ -459,6 +459,7 @@ class OrderListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         order = serializer.save()
+        order.refresh_from_db()
         send_order_notification(order)
 
 

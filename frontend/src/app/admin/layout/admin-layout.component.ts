@@ -94,7 +94,6 @@ import { ThemeService } from '../../core/services/theme.service';
         </div>
       </aside>
 
-      <!-- Main -->
       <main class="admin-main">
         <router-outlet />
       </main>
