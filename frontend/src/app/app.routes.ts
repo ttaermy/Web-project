@@ -29,6 +29,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./admin/orders/orders.component').then(m => m.OrdersComponent),
       },
+      {
+        path: 'audit',
+        loadComponent: () =>
+          import('./admin/audit/audit.component').then(m => m.AuditComponent),
+      },
     ],
   },
   {
@@ -46,6 +51,21 @@ export const routes: Routes = [
         path: 'cart',
         loadComponent: () =>
           import('./shop/cart/cart.component').then(m => m.CartComponent),
+      },
+      {
+        path: 'product/:id',
+        loadComponent: () =>
+          import('./shop/product/product.component').then(m => m.ProductDetailComponent),
+      },
+      {
+        path: 'track',
+        loadComponent: () =>
+          import('./shop/track/track.component').then(m => m.TrackComponent),
+      },
+      {
+        path: 'track/:code',
+        loadComponent: () =>
+          import('./shop/track/track.component').then(m => m.TrackComponent),
       },
     ],
   },

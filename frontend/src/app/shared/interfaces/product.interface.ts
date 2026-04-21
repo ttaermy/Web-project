@@ -12,9 +12,11 @@ export interface Product {
   stock:         number;
   category:      number;
   category_name: string;
-  image:         string | null;     
-  image_url:     string | null;  
-  created_at:    string;
+  image:          string | null;
+  image_url:      string | null;
+  created_at:     string;
+  average_rating?: number;
+  rating_count?:   number;
 }
 
 export interface ProductForm {

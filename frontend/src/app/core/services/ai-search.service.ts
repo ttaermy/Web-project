@@ -14,4 +14,7 @@ export class AiSearchService {
   search(query: string) {
     return this.http.post<AiSearchResult>(`${this.API}/ai-search/`, { query });
   }
+  searchByImage(base64: string) {
+    return this.http.post<AiSearchResult>(`${this.API}/ai-search-by-image/`, { image_base64: base64 });
+  }
 }

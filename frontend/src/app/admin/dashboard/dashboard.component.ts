@@ -1,13 +1,17 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { StatsService } from '../../core/services/stats.service';
 import { Stats } from '../../shared/interfaces/stats.interface';
+import { Chart, registerables } from 'chart.js';
+import { SkeletonComponent } from '../../shared/components/skeleton/skeleton.component';
+
+Chart.register(...registerables);
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, SkeletonComponent],
   template: `
     <div class="page">
       <div class="page-header">
@@ -70,6 +74,16 @@ import { Stats } from '../../shared/interfaces/stats.interface';
           </div>
         </div>
 
+        <!-- Sales Chart -->
+        <div class="card chart-card" style="margin-top: 24px">
+          <div class="card-header">
+            <h3>Продажи за 30 дней</h3>
+          </div>
+          <div class="chart-wrap">
+            <canvas #salesChart></canvas>
+          </div>
+        </div>
+
         <!-- Top Products -->
         <div class="card" style="margin-top: 24px">
           <div class="card-header">
@@ -110,7 +124,17 @@ import { Stats } from '../../shared/interfaces/stats.interface';
           }
         </div>
       } @else {
-        <div class="loading">Загрузка...</div>
+        <div class="stat-grid">
+          @for (s of [1,2,3,4]; track s) {
+            <div class="stat-card">
+              <app-skeleton width="44px" height="44px" borderRadius="10px"></app-skeleton>
+              <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+                <app-skeleton width="80px" height="12px"></app-skeleton>
+                <app-skeleton width="100px" height="28px"></app-skeleton>
+              </div>
+            </div>
+          }
+        </div>
       }
     </div>
   `,
@@ -169,6 +193,8 @@ import { Stats } from '../../shared/interfaces/stats.interface';
       color: var(--text);
     }
 
+    .chart-card { padding: 24px; }
+
     .card-header {
       display: flex;
       align-items: center;
@@ -176,6 +202,11 @@ import { Stats } from '../../shared/interfaces/stats.interface';
       margin-bottom: 16px;
 
       h3 { font-size: 16px; font-weight: 600; }
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 260px;
     }
 
     .rank {
@@ -210,8 +241,14 @@ import { Stats } from '../../shared/interfaces/stats.interface';
     .empty   { color: var(--text-muted); padding: 24px; text-align: center; }
   `]
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   stats = signal<Stats | null>(null);
+  chartData: { date: string; revenue: number }[] = [];
+  private chart: Chart | null = null;
+  private chartReady = false;
+  private dataReady  = false;
+
+  @ViewChild('salesChart') salesChartRef!: ElementRef<HTMLCanvasElement>;
 
   get today() {
     return new Date().toLocaleDateString('ru-RU', {
@@ -223,8 +260,68 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit() {
     this.statsService.getStats().subscribe({
-      next: data => this.stats.set(data),
-      error: err  => console.error(err)
+      next: data => {
+        this.stats.set(data);
+        // Canvas is inside @if(stats()) — it enters the DOM here.
+        // Defer one tick so Angular updates the ViewChild reference first.
+        setTimeout(() => this.maybeDrawChart(), 0);
+      },
+      error: err => console.error(err)
+    });
+    this.statsService.getChartData().subscribe({
+      next: data => {
+        this.chartData = data;
+        this.dataReady = true;
+        setTimeout(() => this.maybeDrawChart(), 0);
+      },
+      error: err => console.error(err)
+    });
+  }
+
+  ngAfterViewInit() {
+    this.chartReady = true;
+    this.maybeDrawChart();
+  }
+
+  ngOnDestroy() {
+    this.chart?.destroy();
+  }
+
+  private maybeDrawChart() {
+    if (this.chart) return;                          // already drawn
+    if (!this.chartReady || !this.dataReady) return;
+    if (!this.salesChartRef) return;
+    if (!this.chartData.length) return;
+
+    const labels = this.chartData.map(d => {
+      const date = new Date(d.date);
+      return `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}`;
+    });
+    const values = this.chartData.map(d => d.revenue);
+
+    this.chart = new Chart(this.salesChartRef.nativeElement, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Выручка',
+          data: values,
+          borderColor: '#2563EB',
+          backgroundColor: 'rgba(37,99,235,0.08)',
+          tension: 0.4,
+          pointRadius: 3,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false } },
+          y: { beginAtZero: true }
+        }
+      }
     });
   }
 

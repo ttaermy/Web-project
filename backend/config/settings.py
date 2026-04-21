@@ -94,4 +94,8 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 load_dotenv()
 
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+GEMINI_API_KEY     = os.getenv('GEMINI_API_KEY')
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+TELEGRAM_CHAT_ID   = os.getenv('TELEGRAM_CHAT_ID')
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'

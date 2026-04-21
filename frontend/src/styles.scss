@@ -1,4 +1,96 @@
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap');
+@import 'intro.js/introjs.css';
+
+/* ── intro.js overrides ── */
+.introjs-tooltip {
+  min-width: 300px !important;
+  max-width: 380px !important;
+  border-radius: 12px !important;
+  font-family: 'Geist', sans-serif !important;
+  background: #fff !important;
+  color: #0F172A !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,.12) !important;
+  padding: 20px !important;
+}
+.introjs-tooltip-header {
+  padding: 0 !important;
+  min-height: 0 !important;
+}
+.introjs-tooltip-title {
+  display: none !important;
+}
+.introjs-tooltiptext {
+  color: #0F172A !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  margin-bottom: 16px !important;
+  padding: 0 !important;
+}
+.introjs-tooltipbuttons {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  border-top: 1px solid #E2E8F0 !important;
+  padding-top: 14px !important;
+  margin-top: 0 !important;
+}
+.introjs-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 7px 14px !important;
+  border-radius: 8px !important;
+  font-family: 'Geist', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  text-shadow: none !important;
+  transition: background .15s !important;
+  white-space: nowrap !important;
+}
+.introjs-nextbutton {
+  background: #2563EB !important;
+  color: #fff !important;
+  border: none !important;
+  margin-left: auto !important;
+}
+.introjs-nextbutton:hover { background: #1D4ED8 !important; }
+.introjs-prevbutton {
+  background: transparent !important;
+  color: #64748B !important;
+  border: 1px solid #E2E8F0 !important;
+}
+.introjs-prevbutton:hover { background: #F1F5F9 !important; }
+.introjs-skipbutton {
+  position: static !important;
+  float: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 7px 20px !important;
+  margin-left: 8px !important;
+  background: transparent !important;
+  color: #64748B !important;
+  border: none !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+  order: -1 !important;
+}
+.introjs-skipbutton:hover { color: #DC2626 !important; background: #FEF2F2 !important; border-radius: 8px !important; }
+.introjs-progress {
+  height: 3px !important;
+  background: #E2E8F0 !important;
+  border-radius: 99px !important;
+  margin-bottom: 14px !important;
+}
+.introjs-progressbar { background: #2563EB !important; border-radius: 99px !important; }
+.introjs-bullets { display: none !important; }
+.introjs-helperLayer { border-radius: 12px !important; }
+.introjs-arrow { display: none !important; }
 
 :root {
   --primary:       #2563EB;
@@ -16,6 +108,17 @@
   --radius:        12px;
   --shadow:        0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
   --shadow-md:     0 4px 6px rgba(0,0,0,.05), 0 2px 4px rgba(0,0,0,.04);
+}
+
+:root.dark {
+  --bg:           #0F172A;
+  --surface:      #1E293B;
+  --border:       #334155;
+  --text:         #F1F5F9;
+  --text-muted:   #94A3B8;
+  --primary-light:#1E3A5F;
+  --shadow:       0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md:    0 4px 6px rgba(0,0,0,0.3);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }

@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { ThemeService } from '../../core/services/theme.service';
 
 @Component({
   selector: 'app-admin-layout',
@@ -54,6 +55,18 @@ import { AuthService } from '../../core/services/auth.service';
             </svg>
             Заказы
           </a>
+
+          <a
+            routerLink="/admin/audit"
+            routerLinkActive="active"
+            class="nav-item"
+          >
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Журнал
+          </a>
         </nav>
 
         <div class="sidebar-footer">
@@ -61,6 +74,18 @@ import { AuthService } from '../../core/services/auth.service';
             <div class="user-avatar">{{ initial }}</div>
             <span class="user-name">{{ username }}</span>
           </div>
+          <button class="theme-btn" (click)="themeService.toggleTheme()" title="Переключить тему">
+            @if (themeService.isDark()) {
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="5"/>
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+              </svg>
+            } @else {
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+              </svg>
+            }
+          </button>
           <button class="logout-btn" (click)="logout()" title="Выйти">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
@@ -148,7 +173,7 @@ import { AuthService } from '../../core/services/auth.service';
       border-top: 1px solid var(--border);
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
 
     .user-info {
@@ -182,6 +207,24 @@ import { AuthService } from '../../core/services/auth.service';
       white-space: nowrap;
     }
 
+    .theme-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 6px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      transition: all .15s;
+      flex-shrink: 0;
+
+      &:hover {
+        background: var(--bg);
+        color: var(--text);
+      }
+    }
+
     .logout-btn {
       background: none;
       border: none;
@@ -209,7 +252,10 @@ import { AuthService } from '../../core/services/auth.service';
   `]
 })
 export class AdminLayoutComponent {
-  constructor(private auth: AuthService) {}
+  constructor(
+    private auth: AuthService,
+    public themeService: ThemeService,
+  ) {}
 
   get username() { return this.auth.getUsername(); }
   get initial()  { return this.username.charAt(0).toUpperCase(); }

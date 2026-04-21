@@ -15,4 +15,5 @@ export interface Order {
   total: string;
   created_at: string;
   items: OrderItem[];
+  tracking_code: string;
 }

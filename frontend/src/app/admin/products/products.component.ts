@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProductService } from '../../core/services/product.service';
 import { Product, Category, ProductForm } from '../../shared/interfaces/product.interface';
+import { StarRatingComponent } from '../../shared/components/star-rating/star-rating.component';
 
 @Component({
   selector: 'app-products',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, StarRatingComponent],
   template: `
     <div class="page">
       <div class="page-header">
@@ -27,12 +28,12 @@ import { Product, Category, ProductForm } from '../../shared/interfaces/product.
           type="text"
           placeholder="Поиск по названию..."
           [ngModel]="searchQuery()"
-          (ngModelChange)="searchQuery.set($event)"
+          (ngModelChange)="searchQuery.set($event); loadProducts()"
           style="max-width: 280px"
         />
         <select
           [ngModel]="selectedCategory()"
-          (ngModelChange)="selectedCategory.set($event)"
+          (ngModelChange)="selectedCategory.set($event); loadProducts()"
           style="max-width: 200px"
         >
           <option value="">Все категории</option>
@@ -42,7 +43,7 @@ import { Product, Category, ProductForm } from '../../shared/interfaces/product.
         </select>
         <select
           [ngModel]="stockFilter()"
-          (ngModelChange)="stockFilter.set($event)"
+          (ngModelChange)="stockFilter.set($event); loadProducts()"
           style="max-width: 200px"
         >
           <option value="">Весь склад</option>
@@ -50,6 +51,17 @@ import { Product, Category, ProductForm } from '../../shared/interfaces/product.
           <option value="ok">В наличии (> 5)</option>
           <option value="empty">Нет в наличии</option>
         </select>
+        <select
+          [ngModel]="ordering()"
+          (ngModelChange)="ordering.set($event); loadProducts()"
+          style="max-width: 180px"
+        >
+          <option value="">По умолчанию</option>
+          <option value="price">Цена ↑</option>
+          <option value="-price">Цена ↓</option>
+          <option value="-created_at">Новинки</option>
+        </select>
+        <button class="btn btn-ghost" (click)="resetFilters()">Сбросить</button>
       </div>
       <div class="card" style="padding: 0; overflow: hidden">
         <table>
@@ -58,12 +70,13 @@ import { Product, Category, ProductForm } from '../../shared/interfaces/product.
               <th>Название</th>
               <th>Категория</th>
               <th>Цена</th>
+              <th>Рейтинг</th>
               <th>Склад</th>
               <th>Действия</th>
             </tr>
           </thead>
           <tbody>
-            @for (p of filteredProducts(); track p.id) {
+            @for (p of products(); track p.id) {
               <tr>
                 <td>
                   <div class="product-name">{{ p.name }}</div>
@@ -76,6 +89,13 @@ import { Product, Category, ProductForm } from '../../shared/interfaces/product.
                 </td>
                 <td>
                   <strong>{{ formatPrice(p.price) }}</strong>
+                </td>
+                <td>
+                  <app-star-rating
+                    [rating]="p.average_rating || 0"
+                    [count]="p.rating_count || 0"
+                    [interactive]="false"
+                  ></app-star-rating>
                 </td>
                 <td>
                   <span
@@ -108,7 +128,7 @@ import { Product, Category, ProductForm } from '../../shared/interfaces/product.
               </tr>
             } @empty {
               <tr>
-                <td colspan="5" class="empty-row">Товары не найдены</td>
+                <td colspan="6" class="empty-row">Товары не найдены</td>
               </tr>
             }
           </tbody>
@@ -290,6 +310,9 @@ import { Product, Category, ProductForm } from '../../shared/interfaces/product.
       border-radius: var(--radius);
       width: 100%;
       max-width: 480px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
       box-shadow: 0 20px 60px rgba(0,0,0,.15);
     }
 
@@ -297,7 +320,9 @@ import { Product, Category, ProductForm } from '../../shared/interfaces/product.
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 20px 24px 0;
+      padding: 20px 24px 16px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
 
       h3 { font-size: 16px; font-weight: 600; }
     }
@@ -319,6 +344,8 @@ import { Product, Category, ProductForm } from '../../shared/interfaces/product.
       display: flex;
       flex-direction: column;
       gap: 14px;
+      overflow-y: auto;
+      flex: 1;
     }
 
     .form-row {
@@ -335,6 +362,7 @@ import { Product, Category, ProductForm } from '../../shared/interfaces/product.
       display: flex;
       justify-content: flex-end;
       gap: 10px;
+      flex-shrink: 0;
     }
 
     .error-msg {
@@ -381,6 +409,7 @@ export class ProductsComponent implements OnInit {
   searchQuery      = signal('');
   selectedCategory = signal('');
   stockFilter      = signal('');
+  ordering         = signal('');
   showModal        = signal(false);
   editingProduct   = signal<Product | null>(null);
   saving           = signal(false);
@@ -407,21 +436,6 @@ clearImage() {
 }
   form: ProductForm = { name: '', description: '', price: null, stock: null, category: null };
 
-  filteredProducts = computed(() => {
-    const q   = this.searchQuery().toLowerCase();
-    const cat = this.selectedCategory();
-    const sf  = this.stockFilter();
-    return this.products().filter(p => {
-      const matchSearch   = p.name.toLowerCase().includes(q);
-      const matchCategory = !cat || p.category === +cat;
-      const matchStock    = !sf
-        || (sf === 'low'   && p.stock <= 5 && p.stock > 0)
-        || (sf === 'ok'    && p.stock > 5)
-        || (sf === 'empty' && p.stock === 0);
-      return matchSearch && matchCategory && matchStock;
-    });
-  });
-
   constructor(private productService: ProductService) {}
 
   ngOnInit() {
@@ -430,10 +444,29 @@ clearImage() {
   }
 
   loadProducts() {
-    this.productService.getProducts().subscribe({
+    const params: any = {};
+    const cat = this.selectedCategory();
+    const q   = this.searchQuery();
+    const sf  = this.stockFilter();
+    const ord = this.ordering();
+    if (cat) params['category'] = +cat;
+    if (q)   params['search']   = q;
+    if (ord) params['ordering'] = ord;
+    if (sf === 'empty') params['in_stock'] = false;
+    else if (sf === 'ok' || sf === 'low') params['in_stock'] = true;
+
+    this.productService.getProducts(params).subscribe({
       next: data => this.products.set(data),
       error: err  => console.error(err)
     });
+  }
+
+  resetFilters() {
+    this.searchQuery.set('');
+    this.selectedCategory.set('');
+    this.stockFilter.set('');
+    this.ordering.set('');
+    this.loadProducts();
   }
 
   loadCategories() {
@@ -450,8 +483,8 @@ clearImage() {
       ? { name: product.name, description: product.description, price: +product.price, stock: product.stock, category: product.category }
       : { name: '', description: '', price: null, stock: null, category: null };
     this.showModal.set(true);
-    this.imagePreview   = null;  
-    this.selectedFile   = null;   
+    this.imagePreview   = null;
+    this.selectedFile   = null;
   }
 
   closeModal() {
@@ -471,8 +504,8 @@ clearImage() {
   const formWithImage = { ...this.form, image: this.selectedFile };
 
   const request$ = this.editingProduct()
-    ? this.productService.updateProduct(this.editingProduct()!.id, formWithImage)  // ← formWithImage
-    : this.productService.createProduct(formWithImage);                             // ← formWithImage
+    ? this.productService.updateProduct(this.editingProduct()!.id, formWithImage)
+    : this.productService.createProduct(formWithImage);
 
   request$.subscribe({
     next: () => {

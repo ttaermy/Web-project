@@ -14,4 +14,5 @@ export class OrderService {
     return this.http.patch<Order>(`${this.API}/orders/${id}/`, { status });
   }
   createOrder(data: any) { return this.http.post<Order>(`${this.API}/orders/`, data); }
+  trackOrder(code: string) { return this.http.get<Order>(`${this.API}/orders/track/${code}/`); }
 }

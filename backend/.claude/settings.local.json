@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python manage.py makemigrations api)",
+      "Bash(pip install *)",
+      "Bash(python manage.py migrate)",
+      "Bash(python manage.py check)",
+      "Bash(python manage.py shell -c ' *)"
+    ]
+  }
+}

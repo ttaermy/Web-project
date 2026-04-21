@@ -2,12 +2,14 @@ import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { OrderService } from '../../core/services/order.service';
+import { AuthService } from '../../core/services/auth.service';
 import { Order } from '../../shared/interfaces/order.interface';
+import { SkeletonComponent } from '../../shared/components/skeleton/skeleton.component';
 
 @Component({
   selector: 'app-orders',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SkeletonComponent],
   template: `
     <div class="page">
 
@@ -16,6 +18,12 @@ import { Order } from '../../shared/interfaces/order.interface';
           <h2>Заказы</h2>
           <p class="subtitle">{{ filtered().length }} заказов</p>
         </div>
+        <button class="btn btn-ghost" (click)="exportExcel()" [disabled]="exportLoading">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+          </svg>
+          {{ exportLoading ? 'Экспорт...' : 'Экспорт Excel' }}
+        </button>
       </div>
 
       <!-- Фильтр по статусу -->
@@ -47,6 +55,19 @@ import { Order } from '../../shared/interfaces/order.interface';
             </tr>
           </thead>
           <tbody>
+            @if (ordersLoading()) {
+              @for (s of [1,2,3,4,5]; track s) {
+                <tr>
+                  <td><app-skeleton height="14px" width="50px"></app-skeleton></td>
+                  <td><app-skeleton height="14px" width="120px"></app-skeleton></td>
+                  <td><app-skeleton height="14px" width="110px"></app-skeleton></td>
+                  <td><app-skeleton height="14px" width="80px"></app-skeleton></td>
+                  <td><app-skeleton height="22px" width="90px" borderRadius="999px"></app-skeleton></td>
+                  <td><app-skeleton height="14px" width="100px"></app-skeleton></td>
+                  <td><app-skeleton height="28px" width="140px" borderRadius="8px"></app-skeleton></td>
+                </tr>
+              }
+            } @else {
             @for (order of filtered(); track order.id) {
               <tr class="order-row" [class.expanded]="expandedId() === order.id">
                 <td><strong>#{{ order.id }}</strong></td>
@@ -104,6 +125,7 @@ import { Order } from '../../shared/interfaces/order.interface';
                 <td colspan="7" class="empty-row">Заказов нет</td>
               </tr>
             }
+            } <!-- end @else ordersLoading -->
           </tbody>
         </table>
       </div>
@@ -204,9 +226,11 @@ import { Order } from '../../shared/interfaces/order.interface';
   `]
 })
 export class OrdersComponent implements OnInit {
-  orders       = signal<Order[]>([]);
-  statusFilter = signal('');
-  expandedId   = signal<number | null>(null);
+  orders        = signal<Order[]>([]);
+  statusFilter  = signal('');
+  expandedId    = signal<number | null>(null);
+  exportLoading = false;
+  ordersLoading = signal(false);
 
   tabs = [
     { label: 'Все',         value: '' },
@@ -221,14 +245,15 @@ export class OrdersComponent implements OnInit {
     return sf ? this.orders().filter(o => o.status === sf) : this.orders();
   });
 
-  constructor(private orderService: OrderService) {}
+  constructor(private orderService: OrderService, private authService: AuthService) {}
 
   ngOnInit() { this.loadOrders(); }
 
   loadOrders() {
+    this.ordersLoading.set(true);
     this.orderService.getOrders().subscribe({
-      next: data => this.orders.set(data),
-      error: err  => console.error(err)
+      next: data => { this.orders.set(data); this.ordersLoading.set(false); },
+      error: err  => { console.error(err); this.ordersLoading.set(false); }
     });
   }
 
@@ -261,6 +286,26 @@ export class OrdersComponent implements OnInit {
 
   formatPrice(price: string) {
     return Number(price).toLocaleString('ru-RU') + ' ₸';
+  }
+
+  exportExcel() {
+    this.exportLoading = true;
+    const token = this.authService.getToken();
+    fetch('/api/orders/export/', { headers: { Authorization: 'Token ' + token } })
+      .then(res => res.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a   = document.createElement('a');
+        a.href     = url;
+        a.download = 'orders.xlsx';
+        a.click();
+        URL.revokeObjectURL(url);
+        this.exportLoading = false;
+      })
+      .catch(err => {
+        console.error(err);
+        this.exportLoading = false;
+      });
   }
 
   formatDate(dateStr: string) {

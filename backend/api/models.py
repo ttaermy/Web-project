@@ -1,4 +1,7 @@
 from django.db import models
+from django.conf import settings
+import random
+import string
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
@@ -32,6 +35,15 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def average_rating(self):
+        avg = self.ratings.aggregate(avg=models.Avg('score'))['avg']
+        return round(float(avg), 1) if avg else 0.0
+
+    @property
+    def rating_count(self):
+        return self.ratings.count()
+
 
 class Order(models.Model):
     STATUS_CHOICES = [
@@ -41,8 +53,8 @@ class Order(models.Model):
         ('cancelled', 'Отменён'),
     ]
 
-    customer_name  = models.CharField(max_length=200)
-    customer_phone = models.CharField(max_length=20)
+    customer_name  = models.CharField(max_length=200, blank=True, null=True)
+    customer_phone = models.CharField(max_length=20, blank=True, null=True)
     status         = models.CharField(
                        max_length=20,
                        choices=STATUS_CHOICES,
@@ -50,11 +62,20 @@ class Order(models.Model):
                      )
     total          = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     created_at     = models.DateTimeField(auto_now_add=True)
+    tracking_code  = models.CharField(max_length=12, unique=True, blank=True)
 
     class Meta:
         verbose_name = 'Заказ'
         verbose_name_plural = 'Заказы'
         ordering = ['-created_at']
+
+    def save(self, *args, **kwargs):
+        if not self.tracking_code:
+            chars = string.ascii_uppercase + string.digits
+            part1 = ''.join(random.choices(chars, k=4))
+            part2 = ''.join(random.choices(chars, k=4))
+            self.tracking_code = f'{part1}-{part2}'
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f'Заказ #{self.id} — {self.customer_name}'
@@ -77,3 +98,42 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f'{self.product.name} x{self.quantity}'
+
+
+class ProductRating(models.Model):
+    product     = models.ForeignKey(
+                    Product,
+                    on_delete=models.CASCADE,
+                    related_name='ratings'
+                  )
+    session_key = models.CharField(max_length=100)
+    score       = models.PositiveSmallIntegerField()
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('product', 'session_key')
+
+    def __str__(self):
+        return f'{self.product.name} — {self.score}/5'
+
+
+class AuditLog(models.Model):
+    user        = models.ForeignKey(
+                    settings.AUTH_USER_MODEL,
+                    on_delete=models.SET_NULL,
+                    null=True, blank=True
+                  )
+    action      = models.CharField(max_length=50)
+    entity      = models.CharField(max_length=50)
+    entity_id   = models.PositiveIntegerField(null=True)
+    description = models.TextField()
+    ip_address  = models.GenericIPAddressField(null=True, blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering     = ['-created_at']
+        verbose_name = 'Лог'
+        verbose_name_plural = 'Логи'
+
+    def __str__(self):
+        return f'{self.action} — {self.entity} #{self.entity_id}'

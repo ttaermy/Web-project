@@ -4,12 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { CartService } from '../../core/services/cart.service';
 import { OrderService } from '../../core/services/order.service';
-import { LucideArrowLeft, LucideCircleCheck, LucideShoppingCart } from '@lucide/angular';
+import { LucideArrowLeft, LucideCircleCheck, LucideShoppingCart, LucideCopy } from '@lucide/angular';
+import QRCode from 'qrcode';
 
 @Component({
   selector: 'app-cart',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, LucideArrowLeft, LucideCircleCheck, LucideShoppingCart],
+  imports: [CommonModule, FormsModule, RouterLink, LucideArrowLeft, LucideCircleCheck, LucideShoppingCart, LucideCopy],
   template: `
     <div class="cart-page">
       <div class="cart-header">
@@ -19,16 +20,56 @@ import { LucideArrowLeft, LucideCircleCheck, LucideShoppingCart } from '@lucide/
         </a>
       </div>
 
-      @if (items().length > 0) {
+      <!-- SUCCESS STATE — shown after order, regardless of cart being cleared -->
+      @if (orderSuccess) {
+        <div class="success-page card">
+          <div class="success-msg">
+            <svg lucideCircleCheck [size]="20"></svg>
+            Заказ #{{ orderId }} успешно оформлен!
+          </div>
+
+          @if (trackingCode) {
+            <div class="tracking-section">
+              <p class="tracking-title">Ваш код отслеживания</p>
+              <div class="tracking-code-row">
+                <span class="tracking-code">{{ trackingCode }}</span>
+                <button class="btn btn-ghost copy-btn" (click)="copyCode()">
+                  <svg lucideCopy [size]="14"></svg>
+                  {{ copied ? 'Скопировано!' : 'Копировать' }}
+                </button>
+              </div>
+              <p class="tracking-hint">Сохраните этот код — по нему вы сможете отслеживать заказ</p>
+              @if (qrDataUrl) {
+                <div class="qr-wrap">
+                  <img [src]="qrDataUrl" alt="QR код" class="qr-img" />
+                  <p class="qr-hint">Отсканируйте для отслеживания заказа</p>
+                </div>
+              }
+              <div class="success-actions">
+                <a [routerLink]="['/shop/track', trackingCode]" class="btn btn-primary">
+                  Отследить заказ
+                </a>
+                <a routerLink="/shop/catalog" class="btn btn-ghost">
+                  Вернуться в каталог
+                </a>
+              </div>
+            </div>
+          } @else {
+            <a routerLink="/shop/catalog" class="btn btn-primary" style="width:fit-content">
+              Вернуться в каталог
+            </a>
+          }
+        </div>
+
+      <!-- CART WITH ITEMS -->
+      } @else if (items().length > 0) {
         <div class="cart-layout">
 
           <!-- Items -->
           <div class="cart-items">
             @for (item of items(); track item.product.id) {
               <div class="cart-item card">
-                <div class="item-img">
-                  {{ item.product.name.charAt(0) }}
-                </div>
+                <div class="item-img">{{ item.product.name.charAt(0) }}</div>
                 <div class="item-info">
                   <p class="item-category">{{ item.product.category_name }}</p>
                   <h4 class="item-name">{{ item.product.name }}</h4>
@@ -67,50 +108,41 @@ import { LucideArrowLeft, LucideCircleCheck, LucideShoppingCart } from '@lucide/
                 </div>
               </div>
 
-              <div class="checkout-form">
-                <div class="form-group">
-                  <label>Ваше имя *</label>
-                  <input
-                    type="text"
-                    placeholder="Имя Фамилия"
-                    [(ngModel)]="customerName"
-                    name="name"
-                  />
+              <label class="anon-label">
+                <input type="checkbox" [(ngModel)]="isAnonymous" name="anon" style="width:auto" />
+                Анонимный заказ
+              </label>
+
+              @if (!isAnonymous) {
+                <div class="checkout-form">
+                  <div class="form-group">
+                    <label>Ваше имя *</label>
+                    <input type="text" placeholder="Имя Фамилия" [(ngModel)]="customerName" name="name" />
+                  </div>
+                  <div class="form-group">
+                    <label>Телефон *</label>
+                    <input type="tel" placeholder="+7 700 000 00 00" [(ngModel)]="customerPhone" name="phone" />
+                  </div>
                 </div>
-                <div class="form-group">
-                  <label>Телефон *</label>
-                  <input
-                    type="tel"
-                    placeholder="+7 700 000 00 00"
-                    [(ngModel)]="customerPhone"
-                    name="phone"
-                  />
-                </div>
-              </div>
+              }
 
               @if (orderError) {
                 <div class="error-msg">{{ orderError }}</div>
               }
 
-              @if (orderSuccess) {
-                <div class="success-msg">
-                  <svg lucideCircleCheck [size]="16"></svg> Заказ #{{ orderId }} оформлен! Мы свяжемся с вами.
-                </div>
-              }
-
-              @if (!orderSuccess) {
-                <button
-                  class="btn btn-primary checkout-btn"
-                  (click)="placeOrder()"
-                  [disabled]="ordering"
-                >
-                  {{ ordering ? 'Оформляем...' : 'Оформить заказ' }}
-                </button>
-              }
+              <button
+                class="btn btn-primary checkout-btn"
+                (click)="placeOrder()"
+                [disabled]="ordering"
+              >
+                {{ ordering ? 'Оформляем...' : 'Оформить заказ' }}
+              </button>
             </div>
           </div>
 
         </div>
+
+      <!-- EMPTY CART -->
       } @else {
         <div class="empty-cart">
           <svg lucideShoppingCart [size]="48" style="opacity:.3"></svg>
@@ -168,10 +200,7 @@ import { LucideArrowLeft, LucideCircleCheck, LucideShoppingCart } from '@lucide/
       flex-shrink: 0;
     }
 
-    .item-info {
-      flex: 1;
-      min-width: 0;
-    }
+    .item-info { flex: 1; min-width: 0; }
 
     .item-category {
       font-size: 11px;
@@ -181,16 +210,9 @@ import { LucideArrowLeft, LucideCircleCheck, LucideShoppingCart } from '@lucide/
       margin-bottom: 2px;
     }
 
-    .item-name {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 2px;
-    }
+    .item-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
 
-    .item-price-unit {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
+    .item-price-unit { font-size: 12px; color: var(--text-muted); }
 
     .item-controls {
       display: flex;
@@ -202,51 +224,30 @@ import { LucideArrowLeft, LucideCircleCheck, LucideShoppingCart } from '@lucide/
     .qty-control {
       display: flex;
       align-items: center;
-      gap: 0;
       border: 1px solid var(--border);
       border-radius: 8px;
       overflow: hidden;
 
       button {
-        width: 32px;
-        height: 32px;
-        border: none;
-        background: var(--bg);
-        cursor: pointer;
-        font-size: 16px;
-        font-weight: 600;
-        color: var(--text);
-        transition: background .15s;
-
+        width: 32px; height: 32px;
+        border: none; background: var(--bg);
+        cursor: pointer; font-size: 16px; font-weight: 600;
+        color: var(--text); transition: background .15s;
         &:hover { background: var(--border); }
       }
 
-      span {
-        width: 36px;
-        text-align: center;
-        font-size: 14px;
-        font-weight: 600;
-      }
+      span { width: 36px; text-align: center; font-size: 14px; font-weight: 600; }
     }
 
     .item-total {
-      font-size: 15px;
-      font-weight: 700;
-      min-width: 90px;
-      text-align: right;
+      font-size: 15px; font-weight: 700;
+      min-width: 90px; text-align: right;
     }
 
     .remove-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: var(--text-muted);
-      padding: 6px;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      transition: all .15s;
-
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); padding: 6px; border-radius: 6px;
+      display: flex; align-items: center; transition: all .15s;
       &:hover { background: #FEF2F2; color: var(--danger); }
     }
 
@@ -254,91 +255,110 @@ import { LucideArrowLeft, LucideCircleCheck, LucideShoppingCart } from '@lucide/
     .checkout-block { position: sticky; top: 80px; }
 
     .checkout-block .card {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-
+      display: flex; flex-direction: column; gap: 16px;
       h3 { font-size: 16px; font-weight: 600; }
     }
 
     .order-summary {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      padding: 12px;
-      background: var(--bg);
-      border-radius: 8px;
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 12px; background: var(--bg); border-radius: 8px;
     }
 
     .summary-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 13px;
-      color: var(--text-muted);
+      display: flex; justify-content: space-between;
+      font-size: 13px; color: var(--text-muted);
 
       &.total {
-        padding-top: 8px;
-        border-top: 1px solid var(--border);
-        font-size: 15px;
-        color: var(--text);
-
+        padding-top: 8px; border-top: 1px solid var(--border);
+        font-size: 15px; color: var(--text);
         strong { font-size: 18px; }
       }
     }
 
-    .checkout-form {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+    .anon-label {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 500; color: var(--text);
+      cursor: pointer;
     }
 
-    .checkout-btn {
-      width: 100%;
-      justify-content: center;
-      padding: 12px;
-      font-size: 15px;
-    }
+    .checkout-form { display: flex; flex-direction: column; gap: 12px; }
+
+    .checkout-btn { width: 100%; justify-content: center; padding: 12px; font-size: 15px; }
 
     .error-msg {
-      background: #FEF2F2;
-      color: var(--danger);
-      border: 1px solid #FECACA;
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 13px;
+      background: #FEF2F2; color: var(--danger);
+      border: 1px solid #FECACA; border-radius: 8px;
+      padding: 10px 14px; font-size: 13px;
+    }
+
+    .success-page {
+      display: flex; flex-direction: column; gap: 20px;
+      max-width: 500px; margin: 0 auto;
     }
 
     .success-msg {
-      background: #F0FDF4;
-      color: var(--success);
-      border: 1px solid #BBF7D0;
-      border-radius: 8px;
-      padding: 12px 14px;
-      font-size: 13px;
-      font-weight: 500;
+      display: flex; align-items: center; gap: 10px;
+      background: #F0FDF4; color: var(--success);
+      border: 1px solid #BBF7D0; border-radius: 10px;
+      padding: 16px 18px; font-size: 15px; font-weight: 600;
     }
+
+    .success-actions {
+      display: flex; gap: 10px; flex-wrap: wrap;
+    }
+
+    .tracking-section {
+      background: var(--bg); border-radius: 10px;
+      padding: 14px; display: flex; flex-direction: column; gap: 10px;
+    }
+
+    .tracking-title { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+
+    .tracking-code-row {
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .tracking-code {
+      font-size: 18px; font-weight: 800; color: var(--primary);
+      letter-spacing: .05em; flex: 1;
+    }
+
+    .copy-btn { padding: 6px 10px; font-size: 12px; }
+
+    .tracking-hint { font-size: 12px; color: var(--text-muted); }
+
+    .qr-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+
+    .qr-img {
+      width: 140px; height: 140px; border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .qr-hint { font-size: 11px; color: var(--text-muted); text-align: center; }
+
+    .track-link { justify-content: center; font-size: 13px; }
 
     /* Empty */
     .empty-cart {
-      text-align: center;
-      padding: 80px 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-
-      span { font-size: 64px; }
-      p    { font-size: 18px; color: var(--text-muted); }
+      text-align: center; padding: 80px 20px;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      p { font-size: 18px; color: var(--text-muted); }
     }
   `]
 })
 export class CartComponent {
   customerName  = '';
   customerPhone = '';
+  isAnonymous   = false;
   ordering      = false;
   orderError    = '';
   orderSuccess  = false;
   orderId:      number | null = null;
+  trackingCode: string | null = null;
+  qrDataUrl:    string | null = null;
+  copied        = false;
 
   constructor(
     private cartService:  CartService,
@@ -360,7 +380,7 @@ export class CartComponent {
   remove(id: number) { this.cartService.remove(id); }
 
   placeOrder() {
-    if (!this.customerName.trim() || !this.customerPhone.trim()) {
+    if (!this.isAnonymous && (!this.customerName.trim() || !this.customerPhone.trim())) {
       this.orderError = 'Заполните имя и телефон';
       return;
     }
@@ -369,8 +389,8 @@ export class CartComponent {
     this.orderError = '';
 
     const payload = {
-      customer_name:  this.customerName.trim(),
-      customer_phone: this.customerPhone.trim(),
+      customer_name:  this.isAnonymous ? '' : this.customerName.trim(),
+      customer_phone: this.isAnonymous ? '' : this.customerPhone.trim(),
       items: this.items().map(i => ({
         product:        i.product.id,
         quantity:       i.quantity,
@@ -380,15 +400,31 @@ export class CartComponent {
 
     this.orderService.createOrder(payload).subscribe({
       next: order => {
-        this.orderSuccess = true;
-        this.orderId      = order.id;
+        this.orderSuccess  = true;
+        this.orderId       = order.id;
+        this.trackingCode  = order.tracking_code;
         this.cartService.clear();
-        this.ordering     = false;
+        this.ordering      = false;
+
+        if (order.tracking_code) {
+          const trackUrl = window.location.origin + '/shop/track/' + order.tracking_code;
+          QRCode.toDataURL(trackUrl, { width: 200, margin: 1 }).then(url => {
+            this.qrDataUrl = url;
+          });
+        }
       },
       error: () => {
         this.orderError = 'Ошибка при оформлении заказа';
         this.ordering   = false;
       }
+    });
+  }
+
+  copyCode() {
+    if (!this.trackingCode) return;
+    navigator.clipboard.writeText(this.trackingCode).then(() => {
+      this.copied = true;
+      setTimeout(() => this.copied = false, 2000);
     });
   }
 
